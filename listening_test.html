@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Evaluation Study</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+       background: #f0f2f5; color: #1a1a1a; font-size: 17px; }
+#progress-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 7px;
+                 background: #ddd; z-index: 100; }
+#progress-bar  { height: 7px; background: #4a90d9; width: 0%; transition: width .3s; }
+.page { display: none; max-width: 1120px; margin: 36px auto 70px; padding: 24px 32px; }
+.page.active { display: block; }
+h1 { font-size: 1.7rem; margin-bottom: 14px; }
+h2 { font-size: 1.25rem; margin-bottom: 12px; color: #333; }
+h3 { font-size: 1.05rem; margin: 16px 0 7px; }
+p  { line-height: 1.65; margin-bottom: 10px; }
+.card { background: #fff; border: 1px solid #d8dde6; border-radius: 10px;
+        padding: 20px; margin-bottom: 16px; }
+.sentence-box { background: #fffbea; border-left: 4px solid #f0a500;
+                border-radius: 6px; padding: 14px 18px; margin-bottom: 20px;
+                font-size: 1.08rem; }
+.sentence-box .sent-label { font-size: 0.82rem; text-transform: uppercase;
+                             letter-spacing: .05em; color: #888; margin-bottom: 5px; }
+.sentence-box .sent-text { font-style: italic; color: #222; font-size: 1.12rem; }
+.anchor-box { background: #eef4ff; border: 1px solid #b0c8f0; border-radius: 10px;
+              padding: 16px; margin-bottom: 20px; }
+.anchor-box .anchor-label { font-weight: 600; color: #2255aa; margin-bottom: 8px;
+                             font-size: 0.95rem; }
+.clips-row { display: flex; flex-wrap: nowrap; gap: 16px; align-items: flex-start; }
+.clip-card { flex: 1 1 0; min-width: 0; background: #fff; border: 1px solid #d8dde6;
+             border-radius: 10px; padding: 16px; }
+.clip-label { font-weight: 700; font-size: 1.05rem; margin-bottom: 10px;
+              color: #2255aa; }
+audio { width: 100%; margin-bottom: 12px; }
+.rating-group { margin-top: 12px; }
+.rating-label { font-size: 0.9rem; color: #444; margin-bottom: 6px; font-weight: 500; }
+.likert { display: flex; gap: 10px; }
+.likert label { display: flex; flex-direction: column; align-items: center;
+                font-size: 0.8rem; gap: 4px; cursor: pointer; min-width: 36px; }
+.likert input[type=radio] { cursor: pointer; width: 16px; height: 16px; }
+.binary { display: flex; gap: 20px; margin-top: 6px; flex-wrap: wrap; }
+.binary label { display: flex; align-items: center; gap: 7px;
+                cursor: pointer; font-size: 0.95rem; }
+.binary input[type=radio] { width: 16px; height: 16px; cursor: pointer; }
+.s2b-pair { display: flex; gap: 16px; margin-bottom: 10px; }
+.s2b-clip { flex: 1 1 0; min-width: 0; }
+.s2b-clip .clip-sublabel { font-size: 0.88rem; color: #555; margin-bottom: 5px;
+                            font-weight: 600; }
+.three-way { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 8px; }
+.three-way label { display: flex; align-items: center; gap: 7px; cursor: pointer;
+                   font-size: 0.95rem; }
+.three-way input[type=radio] { width: 16px; height: 16px; cursor: pointer; }
+.nav-row { margin-top: 26px; display: flex; justify-content: space-between;
+           align-items: center; }
+.btn { background: #4a90d9; color: #fff; border: none; border-radius: 7px;
+       padding: 11px 30px; font-size: 1rem; cursor: pointer; font-weight: 500; }
+.btn:hover { background: #3070b9; }
+.btn-submit { background: #27ae60; }
+.btn-submit:hover { background: #1e8449; }
+.btn-back { background: #fff; color: #555; border: 1px solid #bbb; }
+.btn-back:hover { background: #f0f0f0; color: #222; }
+.btn-csv { background: #e67e22; margin-top: 10px; }
+.btn-csv:hover { background: #ca6f1e; }
+select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px;
+         font-size: 1rem; width: 100%; background: #fff; }
+.field { margin-bottom: 16px; }
+.field label { display: block; margin-bottom: 6px; font-weight: 600; }
+.intro-section { margin-bottom: 20px; }
+.section-badge { display: inline-block; background: #4a90d9; color: #fff;
+                 border-radius: 4px; padding: 3px 10px; font-size: 0.85rem;
+                 margin-bottom: 7px; font-weight: 500; }
+.error-msg { color: #c0392b; font-size: 0.9rem; margin-top: 8px; display: none; }
+.anchors-row { display: flex; gap: 16px; margin-bottom: 20px; }
+.anchor-voice { flex: 1 1 0; background: #eef4ff; border: 1px solid #b0c8f0;
+                border-radius: 10px; padding: 14px; }
+.anchor-voice .av-label { font-weight: 600; color: #2255aa; margin-bottom: 7px;
+                           font-size: 0.95rem; }
+#done-box { text-align: center; padding: 60px 20px; }
+#done-box h1 { color: #27ae60; margin-bottom: 16px; font-size: 2rem; }
+.progress-text { font-size: 0.88rem; color: #888; }
+</style>
+</head>
+<body>
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+
+<!-- Intro / Demographics -->
+<div class="page active" id="page-intro">
+  <h1>Voice Evaluation Study</h1>
+  <div class="intro-section">
+    <p>
+      Thank you for taking part in this study. You are helping evaluate
+      <strong>text-to-speech (TTS) voices</strong> designed for virtual assistant
+      applications. Your responses will form part of a dissertation project at the
+      University of Edinburgh investigating how different training strategies affect
+      the perceived quality and speaker identity of synthetic speech.
+    </p>
+    <p>
+      The study takes approximately <strong>15&ndash;20 minutes</strong>.
+      All responses are anonymous. There are no right or wrong answers &mdash;
+      just rate what you hear.
+    </p>
+  </div>
+
+  <div class="intro-section card">
+    <h2>What you will do</h2>
+    <p><span class="section-badge">Section 1</span>&nbsp;
+      Listen to groups of four short clips and rate each clip on
+      <em>friendliness</em> and <em>suitability as a virtual assistant voice</em>
+      (1&ndash;5 scale). You will do this for 10 sentences.
+    </p>
+    <p><span class="section-badge">Section 2a</span>&nbsp;
+      Listen to pairs of clips and judge whether each clip sounds more like
+      a <em>virtual assistant</em> or an <em>audiobook narrator</em>.
+      You will do this for 10 sentences.
+    </p>
+    <p><span class="section-badge">Section 2b</span>&nbsp;
+      Listen to 10 pairs of clips and decide whether the two clips in each pair
+      sound like they were produced by <em>different speakers</em> or the <em>same speaker</em>.
+    </p>
+  </div>
+
+  <div class="intro-section card">
+    <h2>Tips</h2>
+    <p>&#127911; Please use <strong>headphones or earphones</strong> if possible.
+      Find a quiet environment and listen to each clip at least once before rating.</p>
+    <p style="margin-top:8px">&#9888;&nbsp; <strong>Important &mdash; do not judge naturalness.</strong>
+      The clips are computer-generated and may sound robotic or imperfect.
+      This is expected and is <em>not</em> what you are being asked to evaluate.
+      Focus only on the specific quality asked about in each section.</p>
+  </div>
+
+  <div class="card">
+    <h2>About you</h2>
+    <div class="field">
+      <label for="cefr">English proficiency level</label>
+      <select id="cefr">
+        <option value="">-- select --</option>
+        <option>Native speaker</option>
+        <option>C2 &ndash; Mastery</option>
+        <option>C1 &ndash; Advanced</option>
+        <option>B2 &ndash; Upper intermediate</option>
+        <option>B1 &ndash; Intermediate</option>
+        <option>A2 or below</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="device">Listening with</label>
+      <select id="device">
+        <option value="">-- select --</option>
+        <option>Over-ear headphones</option>
+        <option>In-ear earphones</option>
+        <option>Laptop / computer speakers</option>
+        <option>Phone speaker</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div id="err-intro" class="error-msg">Please fill in both fields above.</div>
+    <div class="nav-row">
+      <span></span>
+      <button class="btn" onclick="startTest()">Begin &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Section 1 sentence pages injected here by JS -->
+<div id="s1-pages"></div>
+
+<!-- Section 2a sentence pages injected here by JS -->
+<div id="s2a-pages"></div>
+
+<!-- Section 2b page -->
+<div class="page" id="page-s2b">
+  <div id="s2b-page"></div>
+</div>
+
+<!-- Done page -->
+<div class="page" id="page-done">
+  <div id="done-box">
+    <h1>&#10003; Thank you!</h1>
+    <p>Your responses have been recorded.</p>
+    <p id="submit-status" style="color:#555; margin-top:8px;"></p>
+    <div id="csv-fallback" style="display:none; margin-top:16px;">
+      <p>Please download and email your response file as a backup:</p>
+      <button class="btn btn-csv" onclick="downloadCSV()">&#8681; Download CSV</button>
+    </div>
+    <p style="margin-top:24px; color:#888; font-size:0.88rem;">
+      You may close this window.
+    </p>
+  </div>
+</div>
+
+<script>
+// ── Sentence text ────────────────────────────────────────────────────────────
+const S1 = ["Alright, the next available appointment is Monday at half past ten.", "Could I take your last name and date of birth, please?", "Have a wonderful day, and thank you for calling us!", "I am delighted to assist you with that.", "If you could bear with me for just a moment, I\'ll pull up your account.", "Not to worry at all, I can get that sorted for you right away.", "That has all gone through successfully on our end.", "That rate includes free cancellation until your arrival date.", "The closest branch to you is about a ten-minute walk from the train station.", "Your booking has been confirmed for tomorrow at seven in the evening."];
+const S2 = ["A late checkout has been added to your reservation free of charge.", "Alright, the confirmation has been sent to the email address.", "Hi, I am your personal assistant, how can I help you today!", "Let\'s check your booking reference.", "Shall I go ahead and reserve those seats for you?", "Sure thing, what else can I do for you today?", "Thank you for using our service, I hope to see you again. Goodbye!", "Would you mind spelling your surname for me, please?", "You are welcome, and I wish you a fabulous day!", "You\'re all done, and it was a pleasure helping you today."];
+
+// ── Audio data ──────────────────────────────────────────────────────────────
+const A = {
+  h1: {
+    C1: ["H1_inf_results/H1_C1/wav/-Alright-the-next-av-0f63f19a--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-Could-I-take-your-l-e1de8634--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-Have-a-wonderful-da-15ce629f--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-I-am-delighted-to-a-fc6b48f8--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-If-you-could-bear-w-33f5c64d--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-Not-to-worry-at-all-52bffe81--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-That-has-all-gone-t-912ef17a--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-That-rate-includes--1d2c391a--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-The-closest-branch--19d550b7--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C1/wav/-Your-booking-has-be-b4f7ff6c--speaker_0--eng--ckpt=33000--v_ckpt=5000000--pred.wav"],
+    C2: ["H1_inf_results/H1_C2/wav/-Alright-the-next-av-0f63f19a--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-Could-I-take-your-l-e1de8634--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-Have-a-wonderful-da-15ce629f--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-I-am-delighted-to-a-fc6b48f8--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-If-you-could-bear-w-33f5c64d--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-Not-to-worry-at-all-52bffe81--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-That-has-all-gone-t-912ef17a--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-That-rate-includes--1d2c391a--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-The-closest-branch--19d550b7--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C2/wav/-Your-booking-has-be-b4f7ff6c--H1_C2_AA75_PA25--eng--ckpt=33000--v_ckpt=5000000--pred.wav"],
+    C3: ["H1_inf_results/H1_C3/wav/-Alright-the-next-av-0f63f19a--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-Could-I-take-your-l-e1de8634--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-Have-a-wonderful-da-15ce629f--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-I-am-delighted-to-a-fc6b48f8--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-If-you-could-bear-w-33f5c64d--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-Not-to-worry-at-all-52bffe81--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-That-has-all-gone-t-912ef17a--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-That-rate-includes--1d2c391a--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-The-closest-branch--19d550b7--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C3/wav/-Your-booking-has-be-b4f7ff6c--zj_AA50PA50--eng--ckpt=33000--v_ckpt=5000000--pred.wav"],
+    C4: ["H1_inf_results/H1_C4/wav/-Alright-the-next-av-0f63f19a--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-Could-I-take-your-l-e1de8634--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-Have-a-wonderful-da-15ce629f--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-I-am-delighted-to-a-fc6b48f8--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-If-you-could-bear-w-33f5c64d--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-Not-to-worry-at-all-52bffe81--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-That-has-all-gone-t-912ef17a--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-That-rate-includes--1d2c391a--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-The-closest-branch--19d550b7--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C4/wav/-Your-booking-has-be-b4f7ff6c--zj_H1_C4_AA25_PA75--eng--ckpt=33000--v_ckpt=5000000--pred.wav"],
+    C5: ["H1_inf_results/H1_C5/wav/-Alright-the-next-av-0f63f19a--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-Could-I-take-your-l-e1de8634--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-Have-a-wonderful-da-15ce629f--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-I-am-delighted-to-a-fc6b48f8--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-If-you-could-bear-w-33f5c64d--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-Not-to-worry-at-all-52bffe81--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-That-has-all-gone-t-912ef17a--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-That-rate-includes--1d2c391a--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-The-closest-branch--19d550b7--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav", "H1_inf_results/H1_C5/wav/-Your-booking-has-be-b4f7ff6c--zhujun_100Agent--eng--ckpt=33000--v_ckpt=5000000--pred.wav"]
+  },
+  h2: {
+    C1_slt: ["H2_inf_results/H2_C1/slt_wav/-A-late-checkout-has-ceb6da66--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-Alright-the-confirm-7871f967--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-Hi-I-am-you-persona-f2850817--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-Let-s-check-your-bo-25a42571--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-Shall-I-go-ahead-an-a0a669af--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-Sure-thing-what-els-023f3e1b--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-Thank-you-for-using-dd7d7235--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-Would-you-mind-spel-e8a263a4--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-You-are-welcome-and-0bcbbd66--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C1/slt_wav/-You-re-all-done-and-ba4b03ed--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav"],
+    C2_slt: ["H2_inf_results/H2_C2/slt_wav/-A-late-checkout-has-ceb6da66--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-Alright-the-confirm-7871f967--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-Hi-I-am-you-persona-f2850817--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-Let-s-check-your-bo-25a42571--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-Shall-I-go-ahead-an-a0a669af--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-Sure-thing-what-els-023f3e1b--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-Thank-you-for-using-dd7d7235--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-Would-you-mind-spel-e8a263a4--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-You-are-welcome-and-0bcbbd66--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/slt_wav/-You-re-all-done-and-ba4b03ed--slt--eng--ckpt=66000--v_ckpt=5000000--pred.wav"],
+    C2_pa:  ["H2_inf_results/H2_C2/pa_wav/-A-late-checkout-has-ceb6da66--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-Alright-the-confirm-7871f967--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-Hi-I-am-you-persona-f2850817--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-Let-s-check-your-bo-25a42571--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-Shall-I-go-ahead-an-a0a669af--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-Sure-thing-what-els-023f3e1b--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-Thank-you-for-using-dd7d7235--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-Would-you-mind-spel-e8a263a4--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-You-are-welcome-and-0bcbbd66--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C2/pa_wav/-You-re-all-done-and-ba4b03ed--pa--eng--ckpt=66000--v_ckpt=5000000--pred.wav"],
+    C3_slt: ["H2_inf_results/H2_C3/slt_wav/-A-late-checkout-has-ceb6da66--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-Alright-the-confirm-7871f967--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-Hi-I-am-you-persona-f2850817--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-Let-s-check-your-bo-25a42571--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-Shall-I-go-ahead-an-a0a669af--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-Sure-thing-what-els-023f3e1b--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-Thank-you-for-using-dd7d7235--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-Would-you-mind-spel-e8a263a4--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-You-are-welcome-and-0bcbbd66--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav", "H2_inf_results/H2_C3/slt_wav/-You-re-all-done-and-ba4b03ed--slt--eng--ckpt=99000--v_ckpt=5000000--pred.wav"]
+  },
+  refA: 'H2_ref_slt/arctic_a0001.wav',
+  refB: 'AgentAudio_Full_6Apr_22k_EP_split/mwz_MUL0015_01.wav'
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentPage = 0;
+const TOTAL_PAGES = 23; // 0=intro, 1-10=S1, 11-20=S2a, 21=S2b, 22=done
+const responses = {};
+const orders = { s1: [], s2a: [], s2b: [] };
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function likertHTML(name, lo, hi) {
+  let s = '<div class="likert">';
+  for (let v = 1; v <= 5; v++) {
+    const lbl = v === 1 ? `1<br><span style="font-size:0.72rem">${lo}</span>`
+              : v === 5 ? `5<br><span style="font-size:0.72rem">${hi}</span>`
+              : v;
+    s += `<label><input type="radio" name="${name}" value="${v}">${lbl}</label>`;
+  }
+  s += '</div>';
+  return s;
+}
+
+function binaryHTML(name, opt1, opt2) {
+  return `<div class="binary">
+    <label><input type="radio" name="${name}" value="${opt1}">${opt1}</label>
+    <label><input type="radio" name="${name}" value="${opt2}">${opt2}</label>
+  </div>`;
+}
+
+function threeWayHTML(name, opts) {
+  return '<div class="three-way">' + opts.map(o =>
+    `<label><input type="radio" name="${name}" value="${o}">${o}</label>`
+  ).join('') + '</div>';
+}
+
+function audioTag(src) {
+  return `<audio controls preload="none" src="${src}"></audio>`;
+}
+
+function getRadioVal(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : null;
+}
+
+// ── Page building ────────────────────────────────────────────────────────────
+function buildS1Pages() {
+  const container = document.getElementById('s1-pages');
+  for (let i = 0; i < 10; i++) {
+    const order = orders.s1[i]; // e.g. ['C3','C2','C5','C4']
+    const letters = ['A','B','C','D'];
+    let cards = '';
+    order.forEach((cond, pos) => {
+      const letter = letters[pos];
+      cards += `
+        <div class="clip-card">
+          <div class="clip-label">Clip ${letter}</div>
+          ${audioTag(A.h1[cond][i])}
+          <div class="rating-group">
+            <div class="rating-label">Friendliness</div>
+            ${likertHTML('s1_s' + i + '_' + cond + '_friendly', 'Not at all', 'Very')}
+          </div>
+          <div class="rating-group" style="margin-top:8px">
+            <div class="rating-label">Suitable as a virtual assistant</div>
+            ${likertHTML('s1_s' + i + '_' + cond + '_suitable', 'Not at all', 'Very')}
+          </div>
+        </div>`;
+    });
+    const pageNum = i + 1;
+    const html = `
+      <div class="page" id="page-s1-${i}">
+        <h2>Section 1 &nbsp;&mdash;&nbsp; Sentence ${pageNum} of 10</h2>
+        <div class="sentence-box">
+          <div class="sent-label">The sentence</div>
+          <div class="sent-text">&ldquo;${S1[i]}&rdquo;</div>
+        </div>
+        <div class="anchor-box">
+          <div class="anchor-label">&#9658; Reference clip &mdash; listen first (unrated)</div>
+          ${audioTag(A.h1.C1[i])}
+        </div>
+        <p style="margin-bottom:8px;color:#555">Now rate each of the four clips below.</p>
+        <p style="margin-bottom:14px;font-size:0.92rem;color:#b05000">
+          &#9888; Do <strong>not</strong> consider how natural or robotic the voice sounds &mdash;
+          rate <strong>friendliness</strong> and <strong>assistant suitability</strong> only.
+        </p>
+        <div class="clips-row">${cards}</div>
+        <div id="err-s1-${i}" class="error-msg">&#9888; Please complete all ratings before continuing.</div>
+        <div class="nav-row">
+          <button class="btn btn-back" onclick="goBack('${i === 0 ? 'page-intro' : 'page-s1-' + (i-1)}', ${i === 0 ? 0 : i})">&larr; Back</button>
+          <span class="progress-text">Page ${pageNum + 1} of ${TOTAL_PAGES}</span>
+          <button class="btn" onclick="nextFromS1(${i})">Next &rarr;</button>
+        </div>
+      </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+function buildS2aPages() {
+  const container = document.getElementById('s2a-pages');
+  for (let i = 0; i < 10; i++) {
+    const order = orders.s2a[i]; // ['C1_slt','C3_slt'] or reversed
+    let cards = '';
+    order.forEach((cond, pos) => {
+      const label = pos === 0 ? 'Clip 1' : 'Clip 2';
+      cards += `
+        <div class="clip-card">
+          <div class="clip-label">${label}</div>
+          ${audioTag(A.h2[cond][i])}
+        </div>`;
+    });
+    const pageNum = i + 11;
+    const html = `
+      <div class="page" id="page-s2a-${i}">
+        <h2>Section 2a &nbsp;&mdash;&nbsp; Sentence ${i+1} of 10</h2>
+        <div class="sentence-box">
+          <div class="sent-label">The sentence</div>
+          <div class="sent-text">&ldquo;${S2[i]}&rdquo;</div>
+        </div>
+        <div class="anchors-row">
+          <div class="anchor-voice">
+            <div class="av-label">&#9658; Voice A &mdash; target speaker reference (unrated)</div>
+            ${audioTag(A.refA)}
+          </div>
+          <div class="anchor-voice">
+            <div class="av-label">&#9658; Voice B &mdash; conversational style reference (unrated)</div>
+            ${audioTag(A.refB)}
+          </div>
+        </div>
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:7px;
+                    padding:12px 16px;margin-bottom:16px;font-size:0.95rem;">
+          <strong>Important:</strong> Both clips say the same sentence.
+          One was produced to sound like a <strong>virtual assistant</strong>,
+          the other like an <strong>audiobook narrator</strong>.
+          Judge the <strong>tone and manner of speaking only</strong> &mdash; ignore the words.<br>
+          <span style="color:#b05000">&#9888; Do <strong>not</strong> consider how natural or
+          robotic the voice sounds &mdash; focus on speaking style only.</span>
+        </div>
+        <div class="clips-row" style="margin-bottom:18px">${cards}</div>
+        <div class="card" style="background:#f8f9fa">
+          <div class="rating-label" style="font-size:1rem;font-weight:600;margin-bottom:10px">
+            Which clip sounds more like a virtual assistant?
+          </div>
+          ${binaryHTML('s2a_s' + i + '_choice', 'Clip 1', 'Clip 2')}
+        </div>
+        <div id="err-s2a-${i}" class="error-msg">&#9888; Please make a selection before continuing.</div>
+        <div class="nav-row">
+          <button class="btn btn-back" onclick="goBack('${i === 0 ? 'page-s1-9' : 'page-s2a-' + (i-1)}', ${i === 0 ? 10 : i + 10})">&larr; Back</button>
+          <span class="progress-text">Page ${pageNum} of ${TOTAL_PAGES}</span>
+          <button class="btn" onclick="nextFromS2a(${i})">Next &rarr;</button>
+        </div>
+      </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+function buildS2bPage() {
+  const container = document.getElementById('s2b-page');
+  let questions = '';
+  for (let i = 0; i < 10; i++) {
+    const order = orders.s2b[i]; // ['C2_slt','C2_pa'] or reversed
+    const clipA = order[0], clipB = order[1];
+    questions += `
+      <div class="card">
+        <h3>Sentence ${i+1}</h3>
+        <div class="sentence-box" style="margin-bottom:14px">
+          <div class="sent-label">The sentence</div>
+          <div class="sent-text">&ldquo;${S2[i]}&rdquo;</div>
+        </div>
+        <div class="s2b-pair">
+          <div class="s2b-clip">
+            <div class="clip-sublabel">Clip A</div>
+            ${audioTag(A.h2[clipA][i])}
+          </div>
+          <div class="s2b-clip">
+            <div class="clip-sublabel">Clip B</div>
+            ${audioTag(A.h2[clipB][i])}
+          </div>
+        </div>
+        <div class="rating-label">Can you tell that Clip A and Clip B are spoken by different people?</div>
+        ${threeWayHTML('s2b_s' + i + '_diff', ['Yes, clearly','Somewhat','No, they sound the same'])}
+      </div>`;
+  }
+  const globalQ = `
+    <div class="card">
+      <h3>Overall impression &mdash; Q1</h3>
+      <p>Across all the sentence pairs you just heard in this section, how similar did the two voices sound overall?</p>
+      <div class="rating-label">1 = very different &nbsp;&nbsp; 5 = identical</div>
+      ${likertHTML('s2b_global', 'Very different', 'Identical')}
+    </div>
+    <div class="card">
+      <h3>Overall impression &mdash; Q2</h3>
+      <p>Thinking about all the clips you heard in this section, which reference voice did they sound most like overall?</p>
+      <div style="display:flex;gap:20px;margin:10px 0 6px;flex-wrap:wrap">
+        <div style="flex:1 1 200px;background:#eef4ff;border:1px solid #b0c8f0;
+                    border-radius:8px;padding:12px">
+          <div style="font-weight:600;color:#2255aa;margin-bottom:6px">
+            &#9658; Reference Voice A (target speaker)
+          </div>
+          ${audioTag(A.refA)}
+        </div>
+        <div style="flex:1 1 200px;background:#eef4ff;border:1px solid #b0c8f0;
+                    border-radius:8px;padding:12px">
+          <div style="font-weight:600;color:#2255aa;margin-bottom:6px">
+            &#9658; Reference Voice B (conversational style)
+          </div>
+          ${audioTag(A.refB)}
+        </div>
+      </div>
+      ${binaryHTML('s2b_voice_match', 'Reference Voice A', 'Reference Voice B')}
+    </div>`;
+  container.innerHTML = `
+    <h2>Section 2b &mdash; Speaker Identity</h2>
+    <p>In this section you will hear pairs of clips. For each pair, both clips say the same sentence.
+       Listen to both and answer the question below.</p>
+    <p style="font-size:0.92rem;color:#b05000;margin-bottom:14px">
+      &#9888; Do <strong>not</strong> consider how natural or robotic the voices sound &mdash;
+      focus only on whether the two clips sound like the <strong>same person or different people</strong>.
+    </p>
+    ${questions}
+    ${globalQ}
+    <div id="err-s2b" class="error-msg">Please answer all questions before submitting.</div>
+    <div class="nav-row">
+      <button class="btn btn-back" onclick="goBack('page-s2a-9', 20)">&larr; Back</button>
+      <span class="progress-text">Page 22 of ${TOTAL_PAGES}</span>
+      <button class="btn btn-submit" onclick="submitTest()">Submit &#10003;</button>
+    </div>`;
+}
+
+// ── Validation ───────────────────────────────────────────────────────────────
+function validateS1(i) {
+  const conds = ['C2','C3','C4','C5'];
+  for (const c of conds) {
+    if (!getRadioVal('s1_s' + i + '_' + c + '_friendly')) return false;
+    if (!getRadioVal('s1_s' + i + '_' + c + '_suitable')) return false;
+  }
+  return true;
+}
+
+function validateS2a(i) {
+  return !!getRadioVal('s2a_s' + i + '_choice');
+}
+
+function validateS2b() {
+  for (let i = 0; i < 10; i++) {
+    if (!getRadioVal('s2b_s' + i + '_diff')) return false;
+  }
+  if (!getRadioVal('s2b_global')) return false;
+  if (!getRadioVal('s2b_voice_match')) return false;
+  return true;
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function goBack(targetId, targetPageNum) {
+  currentPage = targetPageNum;
+  showPage(targetId);
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  const pct = (currentPage / (TOTAL_PAGES - 1)) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function startTest() {
+  const cefr = document.getElementById('cefr').value;
+  const device = document.getElementById('device').value;
+  if (!cefr || !device) {
+    document.getElementById('err-intro').style.display = 'block';
+    return;
+  }
+  responses.timestamp = new Date().toISOString();
+  responses.cefr = cefr;
+  responses.device = device;
+  currentPage = 1;
+  showPage('page-s1-0');
+}
+
+function nextFromS1(i) {
+  if (!validateS1(i)) {
+    document.getElementById('err-s1-' + i).style.display = 'block';
+    return;
+  }
+  document.getElementById('err-s1-' + i).style.display = 'none';
+  // Save responses
+  ['C2','C3','C4','C5'].forEach(c => {
+    responses['s1_s' + (i+1) + '_' + c + '_friendly'] = getRadioVal('s1_s' + i + '_' + c + '_friendly');
+    responses['s1_s' + (i+1) + '_' + c + '_suitable'] = getRadioVal('s1_s' + i + '_' + c + '_suitable');
+  });
+  currentPage++;
+  if (i < 9) {
+    showPage('page-s1-' + (i+1));
+  } else {
+    showPage('page-s2a-0');
+  }
+}
+
+function nextFromS2a(i) {
+  if (!validateS2a(i)) {
+    document.getElementById('err-s2a-' + i).style.display = 'block';
+    return;
+  }
+  document.getElementById('err-s2a-' + i).style.display = 'none';
+  const chosenPos = getRadioVal('s2a_s' + i + '_choice'); // 'Clip 1' or 'Clip 2'
+  const chosenCond = chosenPos === 'Clip 1' ? orders.s2a[i][0] : orders.s2a[i][1];
+  responses['s2a_s' + (i+1) + '_choice_pos']  = chosenPos;
+  responses['s2a_s' + (i+1) + '_choice_cond'] = chosenCond; // actual condition chosen as assistant
+  currentPage++;
+  if (i < 9) {
+    showPage('page-s2a-' + (i+1));
+  } else {
+    showPage('page-s2b');
+  }
+}
+
+// ── Submit ───────────────────────────────────────────────────────────────────
+function submitTest() {
+  if (!validateS2b()) {
+    document.getElementById('err-s2b').style.display = 'block';
+    return;
+  }
+  document.getElementById('err-s2b').style.display = 'none';
+  for (let i = 0; i < 10; i++) {
+    responses['s2b_s' + (i+1) + '_diff'] = getRadioVal('s2b_s' + i + '_diff');
+  }
+  responses['s2b_global'] = getRadioVal('s2b_global');
+  responses['s2b_voice_match'] = getRadioVal('s2b_voice_match');
+  responses['s1_orders'] = JSON.stringify(orders.s1);
+  responses['s2a_orders'] = JSON.stringify(orders.s2a);
+  responses['s2b_orders'] = JSON.stringify(orders.s2b);
+
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySrlokuP8kBmRUMEhfsXJEiDIM5NxK_2tDUMwDhT7zuA_6X_MehULGAqXAZ-cAEpopsg/exec';
+  document.getElementById('submit-status').textContent = 'Sending responses...';
+  showPage('page-done');
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(responses)
+  }).then(() => {
+    document.getElementById('submit-status').textContent = 'Responses submitted successfully.';
+  }).catch(() => {
+    document.getElementById('submit-status').textContent =
+      'Could not reach Google Sheets. Please use the CSV download below.';
+    document.getElementById('csv-fallback').style.display = 'block';
+  });
+}
+
+function downloadCSV() {
+  const keys = Object.keys(responses);
+  const vals = keys.map(k => JSON.stringify(responses[k] ?? '').replace(/^"|"$/g,''));
+  const csv = keys.join(',') + '\n' + vals.join(',');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'response_' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.csv';
+  a.click();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  for (let i = 0; i < 10; i++) {
+    orders.s1.push(shuffle(['C2','C3','C4','C5']));
+    orders.s2a.push(shuffle(['C1_slt','C3_slt']));
+    orders.s2b.push(shuffle(['C2_slt','C2_pa']));
+  }
+  buildS1Pages();
+  buildS2aPages();
+  buildS2bPage();
+  showPage('page-intro');
+});
+</script>
+</body>
+</html>
